@@ -26,21 +26,23 @@ import java.util.List;
 
 @Slf4j
 @Component
-public class Pullgit implements IAction {
+public class Pullgit extends AbstractAction {
 
     @Inject
     private CsarGitService csarGitService;
     @Inject
     private CsarGitRepositoryService csarGitRepositoryService;
 
-    public void process (Action action) {
+    public Action process (Action action) {
        String url = safe(action.getParameters()).get("url");
        String branch = safe(action.getParameters()).get("branch");
 
+       Action response = initResponse(action);
+
        /* url is mandatory */
        if (StringUtils.isBlank(url)) {
-          log.error ("No url defined for pull git action");
-          return;
+          log.error ("Request:" + action.getRequestid() + " - No url defined for pull git action");
+          return completeResponse(response, "KO");
        }
 
        /* repository parameters */
@@ -54,10 +56,10 @@ public class Pullgit implements IAction {
        GetMultipleDataResult<CsarGitRepository> srepo = csarGitRepositoryService.search (query, 0, 1);
        if (srepo.getTotalResults() == 0) {
           if (StringUtils.isBlank(branch)) {
-             log.error ("Repository does not exist: branch is mandatory");
-             return;
+             log.error ("Request:" + action.getRequestid() + " - Repository does not exist: branch is mandatory");
+             return completeResponse(response, "KO");
           }
-          log.info ("creating repository " + url + "[" + branch + "]");
+          log.info ("Request:" + action.getRequestid() + " - creating repository " + url + "[" + branch + "]");
 
           branches = new ArrayList<CsarGitCheckoutLocation>();
           CsarGitCheckoutLocation nb = new CsarGitCheckoutLocation();
@@ -87,7 +89,7 @@ public class Pullgit implements IAction {
              }
           }
           if (!found) { // update repository
-             log.info ("adding branch " + branch + " to repository");
+             log.info ("Request:" + action.getRequestid() + " - adding branch " + branch + " to repository");
              CsarGitCheckoutLocation nb = new CsarGitCheckoutLocation();
              nb.setBranchId(branch);
              branches.add(nb);
@@ -95,8 +97,7 @@ public class Pullgit implements IAction {
           }
        }
 
-       log.info ("Pulling GIT " + id + " : BEGIN");
-
+       log.info ("Request:" + action.getRequestid() + " - Pulling GIT " + id + " : BEGIN");
        List<ParsingResult<Csar>> parsingResult = csarGitService.importFromGitRepository(id);
        for (ParsingResult<Csar> result : parsingResult) {
            // check if there is any critical failure in the import
@@ -106,8 +107,9 @@ public class Pullgit implements IAction {
                }
            }
        }
+       log.info ("Request:" + action.getRequestid() + " - Pulling GIT " + id + " : END");
 
-       log.info ("Pulling GIT " + id + " : END");
+       return completeResponse(response, "OK");
     }
 
 }

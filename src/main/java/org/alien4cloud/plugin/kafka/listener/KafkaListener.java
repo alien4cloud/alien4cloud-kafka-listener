@@ -11,7 +11,11 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -25,7 +29,9 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -39,17 +45,19 @@ public class KafkaListener {
     private KafkaConfiguration configuration;
 
     Consumer<String,String> consumer;
+    Producer<String,String> producer;
 
     @Inject
     private Runworkflow runworkflow;
     @Inject
     private Pullgit pullgit;
 
-    private Map<String, IAction> actions = new HashMap<String, IAction>();
+    private Map<String, AbstractAction> actions = new HashMap<String, AbstractAction>();
 
     @PostConstruct
     public void init() {
-        if (configuration.getBootstrapServers() == null || configuration.getTopic() == null) {
+        if (configuration.getBootstrapServers() == null || configuration.getInputTopic() == null ||
+            configuration.getOutputTopic() == null) {
             log.error("Kafka Listener is not configured.");
         } else {
             Properties props = new Properties();
@@ -61,7 +69,13 @@ public class KafkaListener {
                   StringDeserializer.class.getName());
 
             consumer = new KafkaConsumer<>(props);
-            consumer.subscribe(Collections.singletonList(configuration.getTopic()));
+            consumer.subscribe(Collections.singletonList(configuration.getInputTopic()));
+
+            props = new Properties();
+            props.put("bootstrap.servers", configuration.getBootstrapServers());
+            props.put("client.id", "A4C-kafka_listener-plugin");
+
+            producer = new KafkaProducer<String, String>(props, new StringSerializer(), new StringSerializer());
         }
 
         actions.put ("runworkflow", runworkflow);
@@ -79,7 +93,7 @@ public class KafkaListener {
                  log.debug("Nothing found...");
               } else {
                  consumerRecords.forEach(record -> {
-                     log.info("Consumer Record:=[" + record.value() + "]");
+                     log.debug("Consumer Record:=[" + record.value() + "]");
                      processMessage(record.value());
                  });
               }
@@ -101,19 +115,61 @@ public class KafkaListener {
 
       try {
           String saction = action.getAction();
+          AbstractAction iaction = null;
           if (StringUtils.isNotBlank(saction)) {
-             IAction iaction = actions.get(saction.toLowerCase());
+             iaction = actions.get(saction.toLowerCase());
              if (iaction == null) {
-                log.error ("Action " + saction + " not implemented");
+                log.error ("Request:" + action.getRequestid() + " - action " + 
+                           saction + " not implemented");
+                sendError (action);
              } else {
-                iaction.process(action);
+                log.info ("Request:" + action.getRequestid() + " - " + saction + 
+                          " at " + action.getDatetime());
+                Action response = iaction.process(action);
+                if (response != null) {
+                   String json = (new ObjectMapper()).writeValueAsString(response);
+                   doPublish(json);
+                }
              }
           } else {
-             log.error ("No action set");
+             log.error ("Request:" + action.getRequestid() + " - No action set");
+             sendError (action);
           }
        } catch (Exception e) {
-          log.error ("Error running " + action.getAction() + " : " + e.getMessage());
+          log.error ("Request:" + action.getRequestid() +
+                     " - Error running " + action.getAction() + " : " + e.getMessage());
+          sendError (action);
        }
+    }
+
+    private void sendError(Action request) {
+       try {
+          Action response = new Action();
+          response.setAction("ack");
+          response.setRequestid(request.getRequestid());
+          response.setDatetime((new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")).format(new Date()).toString());      
+          Map<String,String> parameters = new HashMap<String,String>();
+          response.setParameters(parameters);
+          parameters.put ("status", "KO");
+          String json = (new ObjectMapper()).writeValueAsString(response);
+          doPublish(json);
+       } catch (Exception e) {
+          log.error ("Request:" + request.getRequestid() + " - Cannot send response : " + e.getMessage());
+       }
+    }
+
+    public void sendResponse(Action response) {
+       try {
+          String json = (new ObjectMapper()).writeValueAsString(response);
+          doPublish(json);
+       } catch (Exception e) {
+          log.error ("Request:" + response.getRequestid() + " - Cannot send response : " + e.getMessage());
+       }
+    }
+
+    private void doPublish(String json) {
+        producer.send(new ProducerRecord<>(configuration.getOutputTopic(),null,json));
+        log.debug("=> KAFKA[{}] : {}",configuration.getOutputTopic(),json);
     }
 
     @PreDestroy
@@ -126,6 +182,10 @@ public class KafkaListener {
            consumer.close();
            consumer = null;
         }
+      }
+      if (producer != null) {
+          // Close the kafka producer
+          producer.close();
       }
     }
 }

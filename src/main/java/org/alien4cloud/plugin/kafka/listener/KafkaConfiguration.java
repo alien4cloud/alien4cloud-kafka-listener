@@ -16,7 +16,8 @@ public class KafkaConfiguration {
 
     private String bootstrapServers;
 
-    private String topic = "a4c";
+    private String inputTopic = "a4c-in";
+    private String outputTopic = "a4c-out";
 
     private int timeout = 1000;
 }

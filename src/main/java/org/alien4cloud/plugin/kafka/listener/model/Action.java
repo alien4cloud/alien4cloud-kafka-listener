@@ -11,6 +11,10 @@ import lombok.Setter;
 
 public class Action {
 
+   String requestid;
+
+   String datetime;
+
    String action;
 
    Map<String,String> parameters;

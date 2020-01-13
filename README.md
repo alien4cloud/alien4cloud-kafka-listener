@@ -5,7 +5,8 @@ Plugins that listens to a Kafka topic and performs requested actions
 ## Configuration
 In alien4cloud main configuration file, set:
 
-- kafa-listener.boostrapServers : Kafka server
-- kafa-listener.topic : Kafka topic
-- kafa-listener.delay : delay between polls
-- kafa-listener.timeout : poll timeout
+- kafka-listener.boostrapServers : Kafka server
+- kafka-listener.inputTopic : Kafka topic for requests
+- kafka-listener.outputTopic : Kafka topic for responses
+- kafka-listener.delay : delay between polls (optional)
+- kafka-listener.timeout : poll timeout (optional)

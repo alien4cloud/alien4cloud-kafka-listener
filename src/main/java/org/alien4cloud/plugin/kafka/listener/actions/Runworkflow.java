@@ -10,6 +10,7 @@ import alien4cloud.paas.exception.OrchestratorDisabledException;
 import alien4cloud.paas.exception.PaaSDeploymentException;
 import static alien4cloud.utils.AlienUtils.safe;
 
+import org.alien4cloud.plugin.kafka.listener.KafkaListener;
 import org.alien4cloud.plugin.kafka.listener.model.Action;
 
 import org.apache.commons.lang3.StringUtils;
@@ -24,7 +25,7 @@ import java.util.Map;
 
 @Slf4j
 @Component
-public class Runworkflow implements IAction {
+public class Runworkflow extends AbstractAction {
 
     @Inject
     private ApplicationService applicationService;
@@ -32,6 +33,8 @@ public class Runworkflow implements IAction {
     private ApplicationEnvironmentService applicationEnvironmentService;
     @Inject
     private WorkflowExecutionService workflowExecutionService;
+    @Inject
+    private KafkaListener listener;
 
     private ApplicationEnvironment getAppEnvironment(String applicationId, String applicationEnvironmentId) {
         Application application = applicationService.getOrFail(applicationId);
@@ -39,15 +42,17 @@ public class Runworkflow implements IAction {
         return environment;
     }
 
-    public void process (Action action) {
+    public Action process (Action action) {
        String applicationId = safe(action.getParameters()).get("appli");
        String environmentName = safe(action.getParameters()).get("env");
        String workflowName = safe(action.getParameters()).get("workflow");
 
+       Action response = initResponse(action);
+
        /* application name is mandatory */
        if (StringUtils.isBlank(applicationId)) {
-          log.error ("No application defined for run workflow action");
-          return;
+          log.error ("Request:" + action.getRequestid() + " - No application defined for run workflow action");
+          return completeResponse(response, "KO");
        }
 
        /* default workflow is "run" */
@@ -69,8 +74,8 @@ public class Runworkflow implements IAction {
              }
           }
           if (!found) {
-             log.error ("Environment " + environmentName + " not found for application " + applicationId);
-             return;
+             log.error ("Request:" + action.getRequestid() + " - Environment " + environmentName + " not found for application " + applicationId);
+             return completeResponse(response, "KO");
           }
        }
 
@@ -78,25 +83,32 @@ public class Runworkflow implements IAction {
        Map<String, Object> params = new HashMap<String,Object>();
 
        try {
-           log.info ("Running " + workflowName + " for " + applicationId + "-" + environment.getName());
+           log.info ("Request:" + action.getRequestid() + " - Running " + workflowName + " for " + applicationId + "-" + environment.getName());
            // secretProviderConfigurationAndCredentials ???
            workflowExecutionService.launchWorkflow(null, environment.getId(), workflowName, params,
                    new IPaaSCallback<String>() {
                        @Override
                        public void onSuccess(String data) {
-                          // what should we do ?
+                          sendResponse (response, "OK");
                        }
 
                        @Override
                        public void onFailure(Throwable e) {
-                          // what should we do ?
+                          sendResponse (response, "KO");
                        }
                    });
        } catch (OrchestratorDisabledException e) {
-          log.error ("Error running " + workflowName + " for " + applicationId + "-" + environmentName + " : [OrchestratorDisabledException]" + e.getMessage());
+          log.error ("Request:" + action.getRequestid() + " - Error running " + workflowName + " for " + applicationId + "-" + environmentName + " : [OrchestratorDisabledException]" + e.getMessage());
+          return completeResponse(response, "KO");
        } catch (PaaSDeploymentException e) {
-          log.error ("Error running " + workflowName + " for " + applicationId + "-" + environmentName + " : [PaaSDeploymentException]" + e.getMessage());
+          log.error ("Request:" + action.getRequestid() + " - Error running " + workflowName + " for " + applicationId + "-" + environmentName + " : [PaaSDeploymentException]" + e.getMessage());
+          return completeResponse(response, "KO");
        }
+       return null;
+    }
+
+    private void sendResponse (Action response,  String status) {
+       listener.sendResponse(completeResponse(response, status));
     }
 
 }
