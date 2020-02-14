@@ -2,6 +2,8 @@ package org.alien4cloud.plugin.kafka.listener.actions;
 
 import alien4cloud.application.ApplicationEnvironmentService;
 import alien4cloud.application.ApplicationService;
+import alien4cloud.dao.IGenericSearchDAO;
+import alien4cloud.dao.model.GetMultipleDataResult;
 import alien4cloud.deployment.WorkflowExecutionService;
 import alien4cloud.model.application.Application;
 import alien4cloud.model.application.ApplicationEnvironment;
@@ -9,6 +11,7 @@ import alien4cloud.paas.IPaaSCallback;
 import alien4cloud.paas.exception.OrchestratorDisabledException;
 import alien4cloud.paas.exception.PaaSDeploymentException;
 import static alien4cloud.utils.AlienUtils.safe;
+import alien4cloud.utils.MapUtil;
 
 import org.alien4cloud.plugin.kafka.listener.KafkaListener;
 import org.alien4cloud.plugin.kafka.listener.model.Action;
@@ -19,6 +22,7 @@ import org.springframework.stereotype.Component;
 
 import lombok.extern.slf4j.Slf4j;
 
+import javax.annotation.Resource;
 import javax.inject.Inject;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,11 +39,17 @@ public class Runworkflow extends AbstractAction {
     private WorkflowExecutionService workflowExecutionService;
     @Inject
     private KafkaListener listener;
+    @Resource(name = "alien-es-dao")
+    private IGenericSearchDAO alienDAO;
 
-    private ApplicationEnvironment getAppEnvironment(String applicationId, String applicationEnvironmentId) {
-        Application application = applicationService.getOrFail(applicationId);
-        ApplicationEnvironment environment = applicationEnvironmentService.getEnvironmentByIdOrDefault(application.getId(), applicationEnvironmentId);
-        return environment;
+    private Application getApplication(String applicationName) {
+        Map<String, String[]> filters = MapUtil.newHashMap(new String[] { "name" }, new String[][] { new String[] { applicationName } });
+        GetMultipleDataResult<Application> result = alienDAO.search(Application.class, null, filters, 0, 1);
+        if (result.getTotalResults() > 0) {
+           return result.getData()[0];
+        } else {
+           return null;
+        }
     }
 
     public Action process (Action action) {
@@ -60,17 +70,25 @@ public class Runworkflow extends AbstractAction {
           workflowName = "run";
        }
 
+       Application appli = getApplication(applicationId);
+       if (appli != null) {
+          applicationId = appli.getId();
+       } else {
+          log.error ("Request:" + action.getRequestid() + " - Application " + applicationId + " not found.");
+          return completeResponse(response, "KO");
+       }
+
        /* get application environment id from its name if any */
-       String applicationEnvironmentId = null;
+       ApplicationEnvironment environment = null;
        if (StringUtils.isBlank(environmentName)) {
-          applicationEnvironmentId = null;
+          environment = applicationEnvironmentService.getEnvironmentByIdOrDefault(applicationId, null);
        } else {
           ApplicationEnvironment[] envs = applicationEnvironmentService.getByApplicationId (applicationId);
           boolean found = false;
           for (int i = 0 ; (i < envs.length) && !found; i++) {
              found = envs[i].getName().equalsIgnoreCase(environmentName);
              if (found) {
-                applicationEnvironmentId = envs[i].getId();
+                environment = envs[i];
              }
           }
           if (!found) {
@@ -79,9 +97,7 @@ public class Runworkflow extends AbstractAction {
           }
        }
 
-       ApplicationEnvironment environment = getAppEnvironment(applicationId, applicationEnvironmentId);
        Map<String, Object> params = new HashMap<String,Object>();
-
        try {
            log.info ("Request:" + action.getRequestid() + " - Running " + workflowName + " for " + applicationId + "-" + environment.getName());
            // secretProviderConfigurationAndCredentials ???
