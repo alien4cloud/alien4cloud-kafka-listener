@@ -56,6 +56,7 @@ public class KafkaListener {
 
     @PostConstruct
     public void init() {
+      try  {
         if (configuration.getBootstrapServers() == null || configuration.getInputTopic() == null ||
             configuration.getOutputTopic() == null) {
             log.error("Kafka Listener is not configured.");
@@ -67,6 +68,7 @@ public class KafkaListener {
                   StringDeserializer.class.getName());
             props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
                   StringDeserializer.class.getName());
+            props.putAll(configuration.getConsumerProperties());
 
             consumer = new KafkaConsumer<>(props);
             consumer.subscribe(Collections.singletonList(configuration.getInputTopic()));
@@ -74,12 +76,16 @@ public class KafkaListener {
             props = new Properties();
             props.put("bootstrap.servers", configuration.getBootstrapServers());
             props.put("client.id", "A4C-kafka_listener-plugin");
+            props.putAll(configuration.getProducerProperties());
 
             producer = new KafkaProducer<String, String>(props, new StringSerializer(), new StringSerializer());
         }
+      } catch (Exception e) {
+         log.error ("Can not connect to kafka ({})", e.getMessage());
+      }
 
-        actions.put ("runworkflow", runworkflow);
-        actions.put ("pullgit", pullgit);
+       actions.put ("runworkflow", runworkflow);
+       actions.put ("pullgit", pullgit);
     }
 
     @Scheduled(fixedDelayString = "${kafka-listener.delay:1000}")
