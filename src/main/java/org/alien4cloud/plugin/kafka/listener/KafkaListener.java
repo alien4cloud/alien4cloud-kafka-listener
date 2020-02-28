@@ -14,6 +14,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
@@ -103,6 +104,8 @@ public class KafkaListener {
                      processMessage(record.value());
                  });
               }
+           } catch (WakeupException we) {
+              log.debug ("Got WakeupException");
            } catch (Exception e) {
               log.error (e.getMessage());
            }
@@ -180,6 +183,10 @@ public class KafkaListener {
 
     @PreDestroy
     public void term() {
+      if (consumer != null) {
+           // stop polling...
+           consumer.wakeup();
+      }
       synchronized(this) {
         if (consumer != null) {
            // commits the offset of record to broker. 
