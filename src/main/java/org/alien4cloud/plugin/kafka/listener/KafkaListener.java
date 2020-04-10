@@ -38,7 +38,7 @@ import java.util.Map;
 import java.util.Properties;
 
 @Slf4j
-@Service("kafka-listener")
+@Service("kafka-listener" + Qualifier.NAME)
 @EnableScheduling
 public class KafkaListener {
 
@@ -64,7 +64,7 @@ public class KafkaListener {
         } else {
             Properties props = new Properties();
             props.put("bootstrap.servers", configuration.getBootstrapServers());
-            props.put(ConsumerConfig.GROUP_ID_CONFIG, "a4c-kafka-listener");
+            props.put(ConsumerConfig.GROUP_ID_CONFIG, "a4c-kafka-listener" + Qualifier.NAME);
             props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
                   StringDeserializer.class.getName());
             props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
@@ -76,7 +76,7 @@ public class KafkaListener {
 
             props = new Properties();
             props.put("bootstrap.servers", configuration.getBootstrapServers());
-            props.put("client.id", "A4C-kafka_listener-plugin");
+            props.put("client.id", "A4C-kafka_listener-plugin" + Qualifier.NAME);
             props.putAll(configuration.getProducerProperties());
 
             producer = new KafkaProducer<String, String>(props, new StringSerializer(), new StringSerializer());

@@ -14,7 +14,7 @@ import java.util.Map;
 @Setter
 @Component
 @EnableConfigurationProperties
-@ConfigurationProperties(prefix = "kafka-listener")
+@ConfigurationProperties(prefix = "kafka-listener" + Qualifier.NAME)
 public class KafkaConfiguration {
 
     private String bootstrapServers;

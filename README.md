@@ -25,3 +25,19 @@ For example to retry connections to kafka only once a minute, set configuration 
             reconnect.backoff.ms : 60000
             reconnect.backoff.max.ms : 60000
 
+
+## Build alternate qualified plugin archive
+
+You can build an alternative zip archive of this plugin by providing a property named `plugin-qualifier` : 
+
+```
+mvn -Dplugin-qualifier=alt clean install
+```
+
+This will build an archive, named *alien4cloud-kafka-listener-3.0.0-SNAPSHOT-**alt**.zip* where :
+
+- pluginId and bean_name will be suffixed by **-alt**
+- configuration will need to be suffixed by **-alt**
+- Kafka groupId and clientId will be suffixed by **-alt**
+
+By this way you can use several instances if the same plugin using different configuration.

@@ -1,5 +1,5 @@
 <assembly>
-    <id>assemble-plugin</id>
+    <id>${plugin-qualifier}</id>
     <formats>
         <format>zip</format>
         <format>dir</format>

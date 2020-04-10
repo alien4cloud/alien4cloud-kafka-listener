@@ -1,11 +1,11 @@
-id: alien4cloud-kafka-listener
-name: Kafka Listener
+id: alien4cloud-kafka-listener${plugin-qualifier-prefixe}${plugin-qualifier}
+name: Kafka Listener ${plugin-qualifier}
 version: ${project.version}
 description: >
   This plugin listens to a Kafka topic and performs requested actions
 configuration_class: org.alien4cloud.plugin.kafka.listener.PluginConfiguration
 component_descriptors:
-  - bean_name: kafka-listener
-    name: Kafka Listener
+  - bean_name: kafka-listener${plugin-qualifier-prefixe}${plugin-qualifier}
+    name: Kafka Listener ${plugin-qualifier}
     description: >
       Alien Plugin that listens to a Kafka topic and performs requested actions
