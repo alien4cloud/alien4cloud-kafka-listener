@@ -40,7 +40,7 @@
     </dependencies>
 
     <scm>
-        <connection>scm:git:https://github.com/alien4cloud/alien4cloud-kafka-auditlog.git</connection>
+        <connection>scm:git:https://github.com/alien4cloud/alien4cloud-kafka-listener.git</connection>
     </scm>
 
     <repositories>
