@@ -1,0 +1,11 @@
+id: alien4cloud-kafka-listener
+name: Kafka Listener
+version: 3.0.0-M6
+description: >
+  This plugin listens to a Kafka topic and performs requested actions
+configuration_class: org.alien4cloud.plugin.kafka.listener.PluginConfiguration
+component_descriptors:
+  - bean_name: kafka-listener
+    name: Kafka Listener
+    description: >
+      Alien Plugin that listens to a Kafka topic and performs requested actions
