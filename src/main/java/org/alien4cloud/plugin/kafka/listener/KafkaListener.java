@@ -137,7 +137,7 @@ public class KafkaListener {
                 Action response = iaction.process(action);
                 if (response != null) {
                    String json = (new ObjectMapper()).writeValueAsString(response);
-                   doPublish(json);
+                   doPublish(action.getRequestid(), json);
                 }
              }
           } else {
@@ -161,7 +161,7 @@ public class KafkaListener {
           response.setParameters(parameters);
           parameters.put ("status", "KO");
           String json = (new ObjectMapper()).writeValueAsString(response);
-          doPublish(json);
+          doPublish(request.getRequestid(), json);
        } catch (Exception e) {
           log.error ("Request:" + request.getRequestid() + " - Cannot send response : " + e.getMessage());
        }
@@ -170,14 +170,14 @@ public class KafkaListener {
     public void sendResponse(Action response) {
        try {
           String json = (new ObjectMapper()).writeValueAsString(response);
-          doPublish(json);
+          doPublish(response.getRequestid(), json);
        } catch (Exception e) {
           log.error ("Request:" + response.getRequestid() + " - Cannot send response : " + e.getMessage());
        }
     }
 
-    private void doPublish(String json) {
-        producer.send(new ProducerRecord<>(configuration.getOutputTopic(),null,json));
+    private void doPublish(String requestid, String json) {
+        producer.send(new ProducerRecord<>(configuration.getOutputTopic(),requestid,json));
         log.debug("=> KAFKA[{}] : {}",configuration.getOutputTopic(),json);
     }
 
