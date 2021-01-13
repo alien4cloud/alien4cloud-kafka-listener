@@ -52,6 +52,8 @@ public class KafkaListener {
     private Runworkflow runworkflow;
     @Inject
     private Pullgit pullgit;
+    @Inject
+    private Createservice createservice;
 
     private Map<String, AbstractAction> actions = new HashMap<String, AbstractAction>();
 
@@ -87,17 +89,18 @@ public class KafkaListener {
 
        actions.put ("runworkflow", runworkflow);
        actions.put ("pullgit", pullgit);
+       actions.put ("createservice", createservice);
     }
 
     @Scheduled(fixedDelayString = "${kafka-listener.delay:1000}")
     public void listen() {
       synchronized(this) {
        if (consumer != null) {
-           log.debug ("Polling Kafka...");
+           log.trace ("Polling Kafka...");
            try {
               ConsumerRecords<String, String> consumerRecords = consumer.poll(configuration.getTimeout());
               if (consumerRecords.count()==0) {
-                 log.debug("Nothing found...");
+                 log.trace("Nothing found...");
               } else {
                  consumerRecords.forEach(record -> {
                      log.debug("Consumer Record:=[" + record.value() + "]");
