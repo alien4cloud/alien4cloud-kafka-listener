@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -44,7 +45,7 @@ public class Createservice extends AbstractAction {
     @Inject
     private KafkaConfiguration configuration;
 
-    private String locationId = null;
+    private String orchestratorId = null;
 
     @PostConstruct
     public void init() {
@@ -66,22 +67,25 @@ public class Createservice extends AbstractAction {
           log.error ("Can not find orchestrator {}", orchestratorName);
           return;
        }
-       String locationName = configuration.getActionParam ("createservice", "location");
-       if (StringUtils.isBlank(locationName)) {
-          log.info("using location Default");
-          locationName = "Default";
+       orchestratorId = orchestrator.getId();
+   }
+
+   private String getLocationId (String locationName) {
+       if (orchestratorId == null) {
+          log.error ("Orchestrator not set");
+          return null;
        }
-       found = false;
-       for (Location location : locationService.getOrchestratorLocations(orchestrator.getId())) {
+       boolean found = false;
+       for (Location location : locationService.getOrchestratorLocations(orchestratorId)) {
           found = location.getName().equals(locationName);
           if (found) {
-             locationId = location.getId();
-             break;
+             return location.getId();
           }
        }
        if (!found) {
-          log.error ("Can not find location {} for orchestrator {}", locationName, orchestratorName);
+          log.error ("Can not find location {}", locationName);
        }
+       return null;
     }
 
     public Action process (Action action) {
@@ -97,14 +101,25 @@ public class Createservice extends AbstractAction {
        
        Service service = (new ObjectMapper()).convertValue(action.getData(), Service.class);
 
-       String serviceId = serviceResourceService.create(service.getName(), service.getVersion(), service.getNodeType(),
-                service.getNodeTypeVersion());
-       log.info ("Service {} ({}) created", service.getName(), service.getNodeType());
-
        if (service.getNodeInstance() != null) {
             Map<String, AbstractPropertyValue> nodeProperties = service.getNodeInstance().getProperties() == null ? null : new HashMap<String, AbstractPropertyValue>();
             Map<String, Capability> nodeCapabilities = service.getNodeInstance().getCapabilities() == null ? null : new HashMap<String, Capability>();
             Map<String, String> nodeAttributeValues = service.getNodeInstance().getAttributeValues();
+
+            if ((service.getLocations() == null) || (service.getLocations().size() == 0)) {
+               log.error ("Locations not set");
+               return completeResponse (response, "KO");
+            }
+
+            String[] locations = safe(service.getLocations()).stream().map(this::getLocationId).filter(e -> e != null).toArray(String[]::new);
+            if ((locations.length == 0) || (locations.length != service.getLocations().size())) {
+               log.error ("Unknown location(s)");
+               return completeResponse (response, "KO");
+            }
+
+            String serviceId = serviceResourceService.create(service.getName(), service.getVersion(), service.getNodeType(),
+                               service.getNodeTypeVersion());
+            log.info ("Service {} ({}) created", service.getName(), service.getNodeType());
 
             log.debug ("Service attributes: {}", nodeAttributeValues);
 
@@ -132,8 +147,6 @@ public class Createservice extends AbstractAction {
             if ((nodeCapabilities != null) && (nodeCapabilities.size() != service.getNodeInstance().getCapabilities().size())) {
                return completeResponse (response, "KO");
             }
-
-            String[] locations = {locationId};
 
             try {
                serviceResourceService.patch(serviceId, service.getName(), service.getVersion(), null, service.getNodeType(),
