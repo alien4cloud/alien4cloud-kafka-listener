@@ -88,10 +88,11 @@ public class Pullgit extends AbstractAction {
                 break;
              }
           }
-          if (!found) { // update repository
-             log.info ("Request:" + action.getRequestid() + " - adding branch " + branch + " to repository");
+          if (!found) { // update repository, replace branch(es) with new one
+             log.info ("Request:" + action.getRequestid() + " - setting branch " + branch + " to repository " + url);
              CsarGitCheckoutLocation nb = new CsarGitCheckoutLocation();
              nb.setBranchId(branch);
+             branches = new ArrayList<CsarGitCheckoutLocation>();
              branches.add(nb);
              csarGitRepositoryService.update (id, url, username, password, branches, local);
           }
