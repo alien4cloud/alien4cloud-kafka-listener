@@ -97,19 +97,23 @@ public class Pullgit extends AbstractAction {
           }
        }
 
+       String status = "OK";
        log.info ("Request:" + action.getRequestid() + " - Pulling GIT " + id + " : BEGIN");
        List<ParsingResult<Csar>> parsingResult = csarGitService.importFromGitRepository(id);
        for (ParsingResult<Csar> result : parsingResult) {
            // check if there is any critical failure in the import
            for (ParsingError error : result.getContext().getParsingErrors()) {
                if (ParsingErrorLevel.ERROR.equals(error.getErrorLevel())) {
-                  log.error ("Error while importing "  + result.getResult().getName() + " : " + error.getProblem());
+                  log.error ("Error while importing "  + result.getResult().getName() + " : " + 
+                             error.getStartMark() == null ? "" : "l:" + error.getStartMark().getLine() + " c:" + error.getStartMark().getColumn() +
+                             " " + error.getProblem() + " (" + error.getNote() +")" );
+                  status = "KO";
                }
            }
        }
        log.info ("Request:" + action.getRequestid() + " - Pulling GIT " + id + " : END");
 
-       return completeResponse(response, "OK");
+       return completeResponse(response, status);
     }
 
 }
