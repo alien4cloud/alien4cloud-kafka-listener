@@ -133,7 +133,7 @@ public class KafkaListener {
              if (iaction == null) {
                 log.error ("Request:" + action.getRequestid() + " - action " + 
                            saction + " not implemented");
-                sendError (action);
+                sendError (action, "unknown action");
              } else {
                 log.info ("Request:" + action.getRequestid() + " - " + saction + 
                           " at " + action.getDatetime());
@@ -145,16 +145,16 @@ public class KafkaListener {
              }
           } else {
              log.error ("Request:" + action.getRequestid() + " - No action set");
-             sendError (action);
+             sendError (action, "action not set");
           }
        } catch (Exception e) {
           log.error ("Request:" + action.getRequestid() +
                      " - Error running " + action.getAction() + " : " + e.getMessage());
-          sendError (action);
+          sendError (action, "exception: " + e.getMessage());
        }
     }
 
-    private void sendError(Action request) {
+    private void sendError(Action request, String message) {
        try {
           Action response = new Action();
           response.setAction("ack");
@@ -163,6 +163,7 @@ public class KafkaListener {
           Map<String,String> parameters = new HashMap<String,String>();
           response.setParameters(parameters);
           parameters.put ("status", "KO");
+          parameters.put ("message", message);
           String json = (new ObjectMapper()).writeValueAsString(response);
           doPublish(request.getRequestid(), json);
        } catch (Exception e) {

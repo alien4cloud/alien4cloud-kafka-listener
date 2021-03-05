@@ -18,11 +18,14 @@ public abstract class AbstractAction {
        return response;
    }
 
-   protected Action completeResponse (Action response, String status) {
+   protected Action completeResponse (Action response, String status, String message) {
        response.setDatetime((new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")).format(new Date()).toString());      
        Map<String,String> parameters = new HashMap<String,String>();
        response.setParameters(parameters);
        parameters.put ("status", status);
+       if (message != null) {
+          parameters.put ("message", message);
+       }
        return response;
    }
 

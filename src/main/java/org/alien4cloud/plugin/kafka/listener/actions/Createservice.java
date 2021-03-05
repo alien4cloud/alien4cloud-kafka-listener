@@ -95,7 +95,7 @@ public class Createservice extends AbstractAction {
        /* data is mandatory */
        if (action.getData() == null) {
           log.error ("Request:" + action.getRequestid() + " - No data defined for create service action");
-          return completeResponse(response, "KO");
+          return completeResponse(response, "KO", "missing data");
        }
        log.debug ("Createservice with data {}", action.getData().toString());
        
@@ -108,13 +108,13 @@ public class Createservice extends AbstractAction {
 
             if ((service.getLocations() == null) || (service.getLocations().size() == 0)) {
                log.error ("Locations not set");
-               return completeResponse (response, "KO");
+               return completeResponse (response, "KO", "missing location");
             }
 
             String[] locations = safe(service.getLocations()).stream().map(this::getLocationId).filter(e -> e != null).toArray(String[]::new);
             if ((locations.length == 0) || (locations.length != service.getLocations().size())) {
                log.error ("Unknown location(s)");
-               return completeResponse (response, "KO");
+               return completeResponse (response, "KO", "unknown location");
             }
 
             String serviceId = serviceResourceService.create(service.getName(), service.getVersion(), service.getNodeType(),
@@ -145,7 +145,7 @@ public class Createservice extends AbstractAction {
             });
             /* if could not get all capabilities: error... */
             if ((nodeCapabilities != null) && (nodeCapabilities.size() != service.getNodeInstance().getCapabilities().size())) {
-               return completeResponse (response, "KO");
+               return completeResponse (response, "KO", "unknown capability");
             }
 
             try {
@@ -154,12 +154,12 @@ public class Createservice extends AbstractAction {
                                             locations, null, null);
             } catch (Exception e) {
                log.error ("Can not update service: {}", e.getMessage());
-               return completeResponse (response, "KO");
+               return completeResponse (response, "KO", e.getMessage());
             }
             log.info ("Service {} ({}) updated", service.getName(), service.getNodeType());
        }
 
-       return completeResponse(response, "OK");
+       return completeResponse(response, "OK", null);
     }
 
     private Capability getCapability (String name, NodeType node) {

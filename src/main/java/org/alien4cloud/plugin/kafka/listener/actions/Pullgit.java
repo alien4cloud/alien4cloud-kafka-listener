@@ -42,7 +42,7 @@ public class Pullgit extends AbstractAction {
        /* url is mandatory */
        if (StringUtils.isBlank(url)) {
           log.error ("Request:" + action.getRequestid() + " - No url defined for pull git action");
-          return completeResponse(response, "KO");
+          return completeResponse(response, "KO", "missing URL");
        }
 
        /* repository parameters */
@@ -57,7 +57,7 @@ public class Pullgit extends AbstractAction {
        if (srepo.getTotalResults() == 0) {
           if (StringUtils.isBlank(branch)) {
              log.error ("Request:" + action.getRequestid() + " - Repository does not exist: branch is mandatory");
-             return completeResponse(response, "KO");
+             return completeResponse(response, "KO", "missing branch");
           }
           log.info ("Request:" + action.getRequestid() + " - creating repository " + url + "[" + branch + "]");
 
@@ -99,6 +99,7 @@ public class Pullgit extends AbstractAction {
        }
 
        String status = "OK";
+       StringBuffer message = new StringBuffer();
        log.info ("Request:" + action.getRequestid() + " - Pulling GIT " + id + " : BEGIN");
        List<ParsingResult<Csar>> parsingResult = csarGitService.importFromGitRepository(id);
        for (ParsingResult<Csar> result : parsingResult) {
@@ -106,15 +107,18 @@ public class Pullgit extends AbstractAction {
            for (ParsingError error : result.getContext().getParsingErrors()) {
                if (ParsingErrorLevel.ERROR.equals(error.getErrorLevel())) {
                   log.error ("Error while importing "  + result.getResult().getName() + " : " + 
-                             error.getStartMark() == null ? "" : "l:" + error.getStartMark().getLine() + " c:" + error.getStartMark().getColumn() +
+                             (error.getStartMark() == null ? "" : "l:" + error.getStartMark().getLine() + " c:" + error.getStartMark().getColumn()) +
                              " " + error.getProblem() + " (" + error.getNote() +")" );
                   status = "KO";
+                  message.append (result.getResult().getName() + ":" + 
+                                  (error.getStartMark() == null ? "" : "l:" + error.getStartMark().getLine() + " c:" + error.getStartMark().getColumn()) +
+                                  " " + error.getProblem() + " (" + error.getNote() +") " );
                }
            }
        }
        log.info ("Request:" + action.getRequestid() + " - Pulling GIT " + id + " : END");
 
-       return completeResponse(response, status);
+       return completeResponse(response, status, message.length() > 0 ? message.toString() : null);
     }
 
 }

@@ -62,7 +62,7 @@ public class Runworkflow extends AbstractAction {
        /* application name is mandatory */
        if (StringUtils.isBlank(applicationId)) {
           log.error ("Request:" + action.getRequestid() + " - No application defined for run workflow action");
-          return completeResponse(response, "KO");
+          return completeResponse(response, "KO", "missing application");
        }
 
        /* default workflow is "run" */
@@ -75,7 +75,7 @@ public class Runworkflow extends AbstractAction {
           applicationId = appli.getId();
        } else {
           log.error ("Request:" + action.getRequestid() + " - Application " + applicationId + " not found.");
-          return completeResponse(response, "KO");
+          return completeResponse(response, "KO", "application not found");
        }
 
        /* get application environment id from its name if any */
@@ -93,7 +93,7 @@ public class Runworkflow extends AbstractAction {
           }
           if (!found) {
              log.error ("Request:" + action.getRequestid() + " - Environment " + environmentName + " not found for application " + applicationId);
-             return completeResponse(response, "KO");
+             return completeResponse(response, "KO", "environment not found");
           }
        }
 
@@ -105,26 +105,26 @@ public class Runworkflow extends AbstractAction {
                    new IPaaSCallback<String>() {
                        @Override
                        public void onSuccess(String data) {
-                          sendResponse (response, "OK");
+                          sendResponse (response, "OK", null);
                        }
 
                        @Override
                        public void onFailure(Throwable e) {
-                          sendResponse (response, "KO");
+                          sendResponse (response, "KO", e.getMessage());
                        }
                    });
        } catch (OrchestratorDisabledException e) {
           log.error ("Request:" + action.getRequestid() + " - Error running " + workflowName + " for " + applicationId + "-" + environmentName + " : [OrchestratorDisabledException]" + e.getMessage());
-          return completeResponse(response, "KO");
+          return completeResponse(response, "KO", e.getMessage());
        } catch (PaaSDeploymentException e) {
           log.error ("Request:" + action.getRequestid() + " - Error running " + workflowName + " for " + applicationId + "-" + environmentName + " : [PaaSDeploymentException]" + e.getMessage());
-          return completeResponse(response, "KO");
+          return completeResponse(response, "KO", e.getMessage());
        }
        return null;
     }
 
-    private void sendResponse (Action response,  String status) {
-       listener.sendResponse(completeResponse(response, status));
+    private void sendResponse (Action response,  String status, String message) {
+       listener.sendResponse(completeResponse(response, status, message));
     }
 
 }
