@@ -19,5 +19,5 @@ public class Service {
 
     private NodeInstance nodeInstance;
 
-    private List<String> locations;
+    private List<String> targets;
 }

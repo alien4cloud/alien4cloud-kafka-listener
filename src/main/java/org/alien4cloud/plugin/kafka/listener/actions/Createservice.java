@@ -106,15 +106,15 @@ public class Createservice extends AbstractAction {
             Map<String, Capability> nodeCapabilities = service.getNodeInstance().getCapabilities() == null ? null : new HashMap<String, Capability>();
             Map<String, String> nodeAttributeValues = service.getNodeInstance().getAttributeValues();
 
-            if ((service.getLocations() == null) || (service.getLocations().size() == 0)) {
-               log.error ("Locations not set");
-               return completeResponse (response, "KO", "missing location");
+            if ((service.getTargets() == null) || (service.getTargets().size() == 0)) {
+               log.error ("Targets not set");
+               return completeResponse (response, "KO", "missing target");
             }
 
-            String[] locations = safe(service.getLocations()).stream().map(this::getLocationId).filter(e -> e != null).toArray(String[]::new);
-            if ((locations.length == 0) || (locations.length != service.getLocations().size())) {
+            String[] locations = safe(service.getTargets()).stream().map(this::getLocationId).filter(e -> e != null).toArray(String[]::new);
+            if ((locations.length == 0) || (locations.length != service.getTargets().size())) {
                log.error ("Unknown location(s)");
-               return completeResponse (response, "KO", "unknown location");
+               return completeResponse (response, "KO", "unknown target");
             }
 
             String serviceId = serviceResourceService.create(service.getName(), service.getVersion(), service.getNodeType(),
