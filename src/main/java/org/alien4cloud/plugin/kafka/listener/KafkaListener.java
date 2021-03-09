@@ -54,6 +54,8 @@ public class KafkaListener {
     private Pullgit pullgit;
     @Inject
     private Createservice createservice;
+    @Inject
+    private Deleteservice deleteservice;
 
     private Map<String, AbstractAction> actions = new HashMap<String, AbstractAction>();
 
@@ -90,6 +92,7 @@ public class KafkaListener {
        actions.put ("runworkflow", runworkflow);
        actions.put ("pullgit", pullgit);
        actions.put ("createservice", createservice);
+       actions.put ("deleteservice", deleteservice);
     }
 
     @Scheduled(fixedDelayString = "${kafka-listener.delay:1000}")
