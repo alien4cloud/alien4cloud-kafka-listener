@@ -47,8 +47,7 @@ public class Createservice extends AbstractAction {
 
     private String orchestratorId = null;
 
-    @PostConstruct
-    public void init() {
+    public void initOrchestrator() {
        String orchestratorName = configuration.getActionParam ("createservice", "orchestrator");
        if (StringUtils.isBlank(orchestratorName)) {
           log.error("orchestrator not set");
@@ -56,6 +55,10 @@ public class Createservice extends AbstractAction {
        }
        Orchestrator orchestrator = null;
        boolean found = false;
+       if (orchestratorService.getAllEnabledOrchestrators() == null) {
+          log.error("There is no enabled orchestrator");
+          return;
+       }
        for (Orchestrator orc : orchestratorService.getAllEnabledOrchestrators()) {
           found = orc.getName().equals(orchestratorName);
           if (found) {
@@ -71,6 +74,9 @@ public class Createservice extends AbstractAction {
    }
 
    private String getLocationId (String locationName) {
+       if (orchestratorId == null) {
+          initOrchestrator();
+       }
        if (orchestratorId == null) {
           log.error ("Orchestrator not set");
           return null;
@@ -112,6 +118,9 @@ public class Createservice extends AbstractAction {
             }
 
             String[] locations = safe(service.getTargets()).stream().map(this::getLocationId).filter(e -> e != null).toArray(String[]::new);
+            if (orchestratorId == null) {
+               return completeResponse (response, "KO", "can no get orchestrator");
+            }
             if ((locations.length == 0) || (locations.length != service.getTargets().size())) {
                log.error ("Unknown location(s)");
                return completeResponse (response, "KO", "unknown target");
