@@ -15,4 +15,6 @@ public class NodeInstance {
    private Map<String, CapabilityProps> capabilities;
 
    private Map<String, String> attributeValues;
+
+   private MetaProperty[] metaproperties;
 }

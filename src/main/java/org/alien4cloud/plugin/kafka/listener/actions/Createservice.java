@@ -1,5 +1,7 @@
 package org.alien4cloud.plugin.kafka.listener.actions;
 
+import alien4cloud.common.MetaPropertiesService;
+import alien4cloud.model.common.MetaPropertyTarget;
 import alien4cloud.model.orchestrators.Orchestrator;
 import alien4cloud.model.orchestrators.locations.Location;
 import alien4cloud.orchestrators.locations.services.LocationService;
@@ -9,6 +11,7 @@ import static alien4cloud.utils.AlienUtils.safe;
 import org.alien4cloud.alm.service.ServiceResourceService;
 import org.alien4cloud.plugin.kafka.listener.KafkaConfiguration;
 import org.alien4cloud.plugin.kafka.listener.model.Action;
+import org.alien4cloud.plugin.kafka.listener.model.MetaProperty;
 import org.alien4cloud.plugin.kafka.listener.model.Service;
 import org.alien4cloud.tosca.catalog.index.IToscaTypeSearchService;
 import org.alien4cloud.tosca.model.definitions.AbstractPropertyValue;
@@ -41,6 +44,8 @@ public class Createservice extends AbstractAction {
     private OrchestratorService orchestratorService;
     @Inject
     private LocationService locationService;
+    @Inject
+    private MetaPropertiesService metaPropertiesService;
 
     @Inject
     private KafkaConfiguration configuration;
@@ -166,6 +171,25 @@ public class Createservice extends AbstractAction {
                return completeResponse (response, "KO", e.getMessage());
             }
             log.info ("Service {} ({}) updated", service.getName(), service.getNodeType());
+
+            if ((service.getNodeInstance().getMetaproperties() != null) &&
+                (service.getNodeInstance().getMetaproperties().length > 0)) {
+               for (MetaProperty metaprop : service.getNodeInstance().getMetaproperties()) {
+                  String metapropKey = metaPropertiesService.getMetapropertykeyByName(metaprop.getName(), MetaPropertyTarget.SERVICE);
+                  log.debug ("Metaprop {} id {}", metaprop.getName(), metapropKey);
+                  if (metapropKey == null) {
+                     log.error ("Can not find metaproperty: {}", metaprop.getName());
+                     return completeResponse (response, "KO", "Metaproperty " + metaprop.getName() + " does not exist");
+                  }
+                  try {
+                     metaPropertiesService.upsertMetaProperty (serviceResourceService.getOrFail(serviceId), metapropKey, metaprop.getValue());
+                     log.info ("Service {} ({}), metaproperty {} set", service.getName(), service.getNodeType(), metaprop.getName());
+                  } catch (Exception e) {
+                     log.error ("Can not set metaproperty: {}", metaprop.getName());
+                     return completeResponse (response, "KO", "Can not set metaproperty " + metaprop.getName() + " : " + e.getMessage());
+                  }
+               }
+            }
        }
 
        return completeResponse(response, "OK", null);
