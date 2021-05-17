@@ -112,6 +112,11 @@ public class Createservice extends AbstractAction {
        
        Service service = (new ObjectMapper()).convertValue(action.getData(), Service.class);
 
+       if (StringUtils.isBlank(service.getName())) {
+          log.error ("Missing service name");
+          return completeResponse(response, "KO", "missing service name");
+       }
+
        if (service.getNodeInstance() != null) {
             Map<String, AbstractPropertyValue> nodeProperties = service.getNodeInstance().getProperties() == null ? null : new HashMap<String, AbstractPropertyValue>();
             Map<String, Capability> nodeCapabilities = service.getNodeInstance().getCapabilities() == null ? null : new HashMap<String, Capability>();
